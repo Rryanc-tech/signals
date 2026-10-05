@@ -1,1 +1,170 @@
-
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minute Signals Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EDF0EC;--panel:#FBFCFA;--ink:#16233A;--mute:#5E6B7E;--line:#D5DBD3;--up:#17785A;--down:#C03A2B;--wait:#8A6D1D;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101826;--panel:#17212F;--ink:#E7ECF3;--mute:#93A0B4;--line:#2A3649;--up:#3CC49A;--down:#F0705F;--wait:#E2B948}}
+:root[data-theme="dark"]{--bg:#101826;--panel:#17212F;--ink:#E7ECF3;--mute:#93A0B4;--line:#2A3649;--up:#3CC49A;--down:#F0705F;--wait:#E2B948}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;padding:16px 20px 0;max-width:1100px;margin:auto}
+h1{font:800 22px "Bricolage Grotesque",system-ui,sans-serif;margin:0}
+.badge{font-size:13px;color:var(--wait);border:1px solid var(--wait);border-radius:99px;padding:2px 10px}
+main{display:grid;gap:14px;padding:14px 20px 24px;max-width:1100px;margin:auto;grid-template-columns:1fr}
+@media(min-width:860px){main{grid-template-columns:1.5fr 1fr}.sig{grid-column:1}.chart{grid-column:1}.side{grid-column:2;grid-row:1/4}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+h2{font:600 16px "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 10px}
+#word{font:800 clamp(56px,16vw,104px)/1 "Bricolage Grotesque",system-ui,sans-serif;letter-spacing:-.03em}
+#why{color:var(--mute);margin:6px 0 14px}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+#fill{display:block;height:100%;width:0;background:var(--ink);transition:width .5s linear}
+@media(prefers-reduced-motion:reduce){#fill{transition:none}}
+.cd{display:flex;justify-content:space-between;color:var(--mute);margin-top:6px;font-size:14px}
+canvas{width:100%;height:260px;display:block}
+.rows{display:grid;gap:6px}
+.row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--mute)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:10px}
+.stats b{display:block;font:800 26px "Bricolage Grotesque",system-ui,sans-serif}
+.acc{font-size:14px;color:var(--mute);margin:0 0 10px}
+#log{list-style:none;margin:0;padding:0;max-height:180px;overflow:auto;font-size:14px}
+#log li{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line)}
+label{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0}
+input[type=number],input[type=text],input[type=password],select{width:84px;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+button{font:inherit;padding:8px 14px;border:1px solid var(--ink);border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;margin-top:10px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--wait);outline-offset:2px}
+.note{font-size:13px;color:var(--mute);max-width:1100px;margin:0 auto;padding:0 20px 24px}
+</style></head><body>
+<header><h1>Minute Signals</h1><span class="badge" id="badge">Connecting...</span></header>
+<main>
+<section class="panel sig" aria-live="polite">
+ <div id="word" class="flat">WAIT</div><div id="why"></div>
+ <div class="bar"><i id="fill"></i></div>
+ <div class="cd"><span><b id="left">60</b>s until next candle</span><span id="px"></span></div>
+</section>
+<section class="panel chart"><h2>Last 40 candles, with EMA lines</h2><canvas id="cv" role="img" aria-label="Simulated candlestick chart"></canvas></section>
+<div class="side" style="display:grid;gap:14px;align-content:start">
+ <section class="panel"><h2>Why this signal</h2><div class="rows" id="ind"></div></section>
+ <section class="panel"><h2>Your real results</h2>
+  <div class="stats"><div><b id="w" class="up">0</b>wins</div><div><b id="l" class="down">0</b>losses</div><div><b id="t">0</b>ties</div></div>
+  <p class="acc" id="acc"></p><ul id="log"></ul>
+  <button id="reset">Reset results</button></section>
+ <section class="panel"><h2>Settings</h2>
+  <label>EMA cross <input type="checkbox" id="ema"></label>
+  <label>RSI <input type="checkbox" id="rsi"></label>
+  <label>MACD <input type="checkbox" id="macd"></label>
+  <label>Bollinger Bands <input type="checkbox" id="bb"></label>
+  <label>Indicators that must agree <input type="number" id="min" min="1" max="4"></label>
+  <label>EMA fast <input type="number" id="fast" min="2" max="50"></label>
+  <label>EMA slow <input type="number" id="slow" min="3" max="100"></label>
+  <label>RSI buy below <input type="number" id="lo" min="5" max="50"></label>
+  <label>RSI sell above <input type="number" id="hi" min="50" max="95"></label>
+  <label>Payout % <input type="number" id="pay" min="50" max="100"></label>
+  <label>Price source <select id="src" style="width:150px"><option value="binance">Binance (crypto, free)</option><option value="twelve">Twelve Data (forex, key)</option></select></label>
+  <label>Symbol <input type="text" id="sym" style="width:120px" placeholder="BTCUSDT or EUR/USD"></label>
+  <label id="keyrow">API key <input type="password" id="key" style="width:120px" autocomplete="off"></label>
+  <button id="go" style="margin:6px 0 10px">Connect</button>
+ </section>
+</div>
+</main>
+<p class="note">Prices come from the source you pick. This page does not connect to Pocket Option and places no trades. Pocket Option quotes (especially OTC pairs) can differ from these market prices. A signal opens at the start of a candle and is scored at that candle's close. Judge it by the tracker after at least 100 scored candles.</p>
+<script>
+const $=id=>document.getElementById(id);
+let S={ema:1,rsi:1,macd:1,bb:1,min:2,fast:5,slow:13,lo:30,hi:70,pay:85,src:'binance',sym:'BTCUSDT',key:''};
+let T={w:0,l:0,t:0,log:[]};
+try{Object.assign(S,JSON.parse(localStorage.getItem('ms_set2')||'{}'));Object.assign(T,JSON.parse(localStorage.getItem('ms_trk2')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('ms_set2',JSON.stringify(S));localStorage.setItem('ms_trk2',JSON.stringify(T))}catch(e){}};
+let C=[],cur=null,p=0,endAt=Date.now()+60000,sig={d:0,v:[],b:0,s:0},pend=null,ws=null,poll=null,gen=0;
+const ema=(a,n)=>{const k=2/(n+1);let e=a[0];return a.map((v,i)=>i?(e=v*k+e*(1-k)):e)};
+function rsi(a,n=14){let G=0,L=0;for(let i=1;i<=n;i++){const d=a[i]-a[i-1];d>0?G+=d:L-=d}G/=n;L/=n;for(let i=n+1;i<a.length;i++){const d=a[i]-a[i-1];G=(G*(n-1)+Math.max(d,0))/n;L=(L*(n-1)+Math.max(-d,0))/n}return L?100-100/(1+G/L):100}
+function decide(){
+ if(C.length<30)return{d:0,v:[],b:0,s:0};
+ const c=C.map(x=>x.c),n=c.length-1,f=ema(c,S.fast)[n],s=ema(c,S.slow)[n];
+ const m=ema(c,12).map((v,i)=>v-ema(c,26)[i]),h=m[n]-ema(m,9)[n],r=rsi(c);
+ const w=c.slice(-20),mu=w.reduce((a,b)=>a+b)/20,sd=Math.sqrt(w.reduce((a,b)=>a+(b-mu)**2,0)/20),x=c[n];
+ const v=[];
+ if(S.ema)v.push(['EMA '+S.fast+'/'+S.slow,f>s?1:-1,f>s?'fast above slow':'fast below slow']);
+ if(S.rsi)v.push(['RSI '+r.toFixed(0),r<S.lo?1:r>S.hi?-1:0,r<S.lo?'oversold':r>S.hi?'overbought':'neutral']);
+ if(S.macd)v.push(['MACD',h>0?1:-1,h>0?'momentum up':'momentum down']);
+ if(S.bb)v.push(['Bollinger',x<mu-2*sd?1:x>mu+2*sd?-1:0,x<mu-2*sd?'below lower band':x>mu+2*sd?'above upper band':'inside bands']);
+ const b=v.filter(a=>a[1]>0).length,s2=v.filter(a=>a[1]<0).length;
+ return{d:b>=S.min&&b>s2?1:s2>=S.min&&s2>b?-1:0,v,b,s:s2};
+}
+function status(t,bad){const b=$('badge');b.textContent=t;b.style.color=bad?'var(--down)':'var(--up)'}
+function closeCandle(c){
+ if(pend){const r=c.c>pend.e?1:c.c<pend.e?-1:0,res=r===0?'tie':r===pend.d?'win':'loss';
+  T[res==='win'?'w':res==='loss'?'l':'t']++;
+  T.log.unshift({d:pend.d,res,t:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})});
+  T.log=T.log.slice(0,30)}
+ C.push(c);if(C.length>200)C.shift();
+ cur={o:c.c,h:c.c,l:c.c,c:c.c};p=c.c;
+ sig=decide();pend=sig.d?{d:sig.d,e:c.c}:null;
+ save();render();
+}
+function stop(){gen++;if(ws){ws.onclose=null;ws.close();ws=null}clearInterval(poll)}
+async function connect(){
+ stop();const my=gen;C=[];cur=null;pend=null;sig=decide();render();status('Connecting...');
+ try{S.src==='binance'?await bin(my):await twe(my)}catch(e){status('Could not connect: '+e.message,1)}
+}
+async function bin(my){
+ const s=S.sym.toUpperCase().trim(),r=await fetch('https://data-api.binance.vision/api/v3/klines?symbol='+s+'&interval=1m&limit=100');
+ if(!r.ok)throw new Error('symbol not found (try BTCUSDT)');
+ const k=await r.json();if(my!==gen)return;
+ C=k.slice(0,-1).map(x=>({o:+x[1],h:+x[2],l:+x[3],c:+x[4]}));
+ const L=k[k.length-1];cur={o:+L[1],h:+L[2],l:+L[3],c:+L[4]};p=cur.c;endAt=L[6]+1;
+ sig=decide();render();
+ ws=new WebSocket('wss://data-stream.binance.vision/ws/'+s.toLowerCase()+'@kline_1m');
+ ws.onopen=()=>status('Live: Binance '+s);
+ ws.onmessage=m=>{const k=JSON.parse(m.data).k;if(!k)return;const c={o:+k.o,h:+k.h,l:+k.l,c:+k.c};p=c.c;endAt=k.T+1;if(k.x)closeCandle(c);else{cur=c;hud();draw()}};
+ ws.onclose=()=>{if(my===gen){status('Disconnected, retrying...',1);setTimeout(()=>{if(my===gen)connect()},3000)}};
+}
+async function twe(my){
+ if(!S.key)throw new Error('add your Twelve Data API key');
+ const q=encodeURIComponent(S.sym.trim()),u='https://api.twelvedata.com/';
+ const r=await(await fetch(u+'time_series?symbol='+q+'&interval=1min&outputsize=100&apikey='+S.key)).json();
+ if(my!==gen)return;if(r.status==='error'||!r.values)throw new Error(r.message||'no data');
+ const v=r.values.reverse().map(x=>({o:+x.open,h:+x.high,l:+x.low,c:+x.close}));
+ C=v.slice(0,-1);cur=v[v.length-1];p=cur.c;let mb=Math.floor(Date.now()/60000);endAt=(mb+1)*60000;
+ sig=decide();render();status('Live: Twelve Data '+S.sym+' (updates every 10 s)');
+ poll=setInterval(async()=>{try{
+  const j=await(await fetch(u+'price?symbol='+q+'&apikey='+S.key)).json();if(my!==gen||!j.price)return;
+  const x=+j.price,m=Math.floor(Date.now()/60000);
+  if(m!==mb){mb=m;closeCandle(cur)}
+  p=x;cur.c=x;cur.h=Math.max(cur.h,x);cur.l=Math.min(cur.l,x);endAt=(mb+1)*60000;hud();draw();
+ }catch(e){status('Feed error, retrying...',1)}},10000);
+}
+function render(){
+ const wd=$('word');wd.textContent=sig.d>0?'BUY':sig.d<0?'SELL':'WAIT';wd.className=sig.d>0?'up':sig.d<0?'down':'flat';
+ $('why').textContent=C.length<30?'Waiting for price data...':sig.d?`${sig.d>0?sig.b:sig.s} of ${sig.v.length} indicators agree. Scored at this candle's close.`:'Indicators do not agree enough. Skipping this candle is a valid choice.';
+ $('ind').innerHTML=sig.v.map(a=>`<div class="row"><span>${a[0]}</span><span class="${a[1]>0?'up':a[1]<0?'down':'flat'}">${a[1]>0?'Buy':a[1]<0?'Sell':'Neutral'}: ${a[2]}</span></div>`).join('')||'<span class="flat">No indicator data yet.</span>';
+ const n=T.w+T.l,be=(10000/(100+S.pay)).toFixed(1);
+ $('w').textContent=T.w;$('l').textContent=T.l;$('t').textContent=T.t;
+ $('acc').textContent=n?`Accuracy ${(100*T.w/n).toFixed(1)}% over ${n} trades. Break-even at ${S.pay}% payout: ${be}%.${n<30?' Too few trades to mean much yet.':''}`:`Break-even at ${S.pay}% payout: ${be}%. Results appear after the first scored candle.`;
+ $('log').innerHTML=T.log.map(e=>`<li><span>${e.t} ${e.d>0?'Buy':'Sell'}</span><span class="${e.res==='win'?'up':e.res==='loss'?'down':'flat'}">${e.res}</span></li>`).join('');
+ hud();draw();
+}
+function hud(){if(!cur)return;const left=Math.max(0,(endAt-Date.now())/1000);$('left').textContent=Math.ceil(left);$('fill').style.width=Math.min(100,100*(60-left)/60)+'%';$('px').textContent=p.toFixed(p>100?2:5)}
+const cv=$('cv'),cx=cv.getContext('2d'),css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function draw(){
+ const d=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);cx.clearRect(0,0,W,H);
+ if(!cur||C.length<2)return;
+ const all=C.concat([cur]),vis=all.slice(-40),cl=all.map(x=>x.c),f=ema(cl,S.fast).slice(-40),s=ema(cl,S.slow).slice(-40);
+ let hi=Math.max(...vis.map(x=>x.h)),lo=Math.min(...vis.map(x=>x.l));const pad=(hi-lo)*.08||1e-5;hi+=pad;lo-=pad;
+ const y=v=>H-6-(v-lo)/(hi-lo)*(H-12),bw=W/vis.length;
+ vis.forEach((k,i)=>{const x=i*bw+bw/2;cx.strokeStyle=cx.fillStyle=css(k.c>=k.o?'--up':'--down');cx.beginPath();cx.moveTo(x,y(k.h));cx.lineTo(x,y(k.l));cx.stroke();const t=y(Math.max(k.o,k.c)),b=y(Math.min(k.o,k.c));cx.fillRect(x-bw*.3,t,bw*.6,Math.max(1,b-t))});
+ [[f,'--ink'],[s,'--wait']].forEach(([a,c])=>{cx.strokeStyle=css(c);cx.lineWidth=1.5;cx.beginPath();a.forEach((v,i)=>{const x=i*bw+bw/2;i?cx.lineTo(x,y(v)):cx.moveTo(x,y(v))});cx.stroke()});
+}
+setInterval(hud,500);
+['ema','rsi','macd','bb'].forEach(k=>{$(k).checked=!!S[k];$(k).onchange=e=>{S[k]=e.target.checked?1:0;sig=decide();save();render()}});
+['min','fast','slow','lo','hi','pay'].forEach(k=>{$(k).value=S[k];$(k).onchange=e=>{const v=+e.target.value;if(v>0){S[k]=v;sig=decide();save();render()}}});
+$('src').value=S.src;$('sym').value=S.sym;$('key').value=S.key;
+$('src').onchange=e=>{S.src=e.target.value;S.sym=S.src==='binance'?'BTCUSDT':'EUR/USD';$('sym').value=S.sym;$('keyrow').hidden=S.src==='binance'};
+$('keyrow').hidden=S.src==='binance';
+$('go').onclick=()=>{S.sym=$('sym').value;S.key=$('key').value.trim();save();connect()};
+$('reset').onclick=()=>{T={w:0,l:0,t:0,log:[]};save();render()};
+addEventListener('resize',draw);
+render();connect();
+</script></body></html>
